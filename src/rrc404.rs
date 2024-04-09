@@ -33,10 +33,6 @@ impl Color {
 #[types(Vault, NonFungibleLocalId, NonFungibleGlobalId)]
 mod rrc404 {
 
-    const ICE_DEV: ResourceManager = resource_manager!(
-        "resource_rdx1thcm6cm0v8km0n0auxf3fzg7tnghld99p37sl74zxugvzknde8qmwe"
-    );
-
     struct Rrc404 {
         rrc404_fungible: ResourceManager,
         rrc404_nft: ResourceManager,
@@ -52,17 +48,28 @@ mod rrc404 {
 
     impl Rrc404 {
 
+        pub fn instantiate(component_addr: Option<GlobalAddressReservation>) -> (Global<Rrc404>, Bucket) {
+            return Self::instantiate_rrc404(dec!(1000), "Ice".to_string(), "Water".to_string(),
+                                            "ICE".to_string(), "ICE RRC404 Experiment".to_string(), component_addr);
+        }
+
         pub fn instantiate_rrc404(
             max_supply: Decimal,
             nft_name: String,
             fungible_name: String,
             symbol: String,
             description: String,
+            component_addr: Option<GlobalAddressReservation>
         ) -> (Global<Rrc404>, Bucket) {
 
-            let (address_reservation, component_address) =
-                Runtime::allocate_component_address(<Rrc404>::blueprint_id());
-            
+            let (address_reservation, component_address) = match component_addr {
+                None => Runtime::allocate_component_address(<Rrc404>::blueprint_id()),
+                Some(r) => {
+                    let addr = Runtime::get_reservation_address(&r).try_into().unwrap();
+                    (r, addr)
+                },
+            };
+
             let rrc404_fungible = ResourceBuilder::new_fungible(OwnerRole::Fixed(
                 rule!(require(global_caller(component_address)))))
                 .divisibility(DIVISIBILITY_MAXIMUM)
@@ -120,8 +127,8 @@ mod rrc404 {
                 purple_supply: dec!(0),
             }
             .instantiate()
-            // .prepare_to_globalize(OwnerRole::None)
-            .prepare_to_globalize(OwnerRole::Fixed(rule!(require(ICE_DEV.address()))))
+            .prepare_to_globalize(OwnerRole::None)
+            // .prepare_to_globalize(OwnerRole::Fixed(rule!(require(ICE_DEV.address()))))
             .with_address(address_reservation)
             .enable_component_royalties(component_royalties! {
                 init {
