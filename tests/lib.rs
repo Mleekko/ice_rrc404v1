@@ -10,6 +10,14 @@ pub const RRC404_COMPONENT: ComponentAddress = ComponentAddress::new_or_panic([
     192, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 225, 206, 28, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]); // component_sim1cqqqqqqqqqqqqqqqqqqpecwwrnsqqqqqqqqqqqqqqqqqqqqqgguvvr
 
+pub const RRC404_WATER: ResourceAddress = ResourceAddress::new_or_panic([
+    93, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 225, 206, 28, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+]); // resource_sim1t5qqqqqqqqqqqqqqqqqpecwwrnsqqqqqqqqqqqqqqqqqqqqqs3ask4
+
+pub const RRC404_ICE: ResourceAddress = ResourceAddress::new_or_panic([
+    154, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 225, 206, 28, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+]); // resource_sim1ngqqqqqqqqqqqqqqqqqpecwwrnsqqqqqqqqqqqqqqqqqqqqq6lw2hr
+
 
 #[test]
 fn test_instantiate() {
@@ -25,7 +33,7 @@ fn test_instantiate() {
                 package_address: DynamicPackageAddress::Static(RRC404_PACKAGE),
                 blueprint_name: "Rrc404".to_string(),
                 function_name: "instantiate".to_string(),
-                args: manifest_args!(Some(ManifestAddressReservation(0))).into(),
+                args: manifest_args!(Some(ManifestAddressReservation(0)), Some(ManifestAddressReservation(1)), Some(ManifestAddressReservation(2))).into(),
             },
             InstructionV1::CallMethod {
                 address: DynamicGlobalAddress::Static(GlobalAddress::new_or_panic(owner_account.into())),
@@ -35,6 +43,16 @@ fn test_instantiate() {
         vec![(
                  BlueprintId::new(&RRC404_PACKAGE, "Rrc404"),
                  GlobalAddress::new_or_panic(RRC404_COMPONENT.into()),
+             )
+                 .into(),
+             (
+                 BlueprintId::new(&RESOURCE_PACKAGE, FUNGIBLE_RESOURCE_MANAGER_BLUEPRINT.to_owned()),
+                 GlobalAddress::new_or_panic(RRC404_WATER.into()),
+             )
+                 .into(),
+             (
+                 BlueprintId::new(&RESOURCE_PACKAGE, NON_FUNGIBLE_RESOURCE_MANAGER_BLUEPRINT.to_owned()),
+                 GlobalAddress::new_or_panic(RRC404_ICE.into()),
              )
                  .into()],
         btreeset!(NonFungibleGlobalId::from_public_key(&public_key)),

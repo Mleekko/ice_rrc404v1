@@ -1,4 +1,5 @@
 use scrypto::prelude::*;
+use scrypto::engine::wasm_api::{addr, copy_buffer};
 
 #[derive(ScryptoSbor, PartialEq, Debug, Clone)]
 pub enum Color {
@@ -48,9 +49,11 @@ mod rrc404 {
 
     impl Rrc404 {
 
-        pub fn instantiate(component_addr: Option<GlobalAddressReservation>) -> (Global<Rrc404>, Bucket) {
+        pub fn instantiate(component_addr: Option<GlobalAddressReservation>,
+                           water_addr: Option<GlobalAddressReservation>,
+                           ice_addr: Option<GlobalAddressReservation>) -> (Global<Rrc404>, Bucket) {
             return Self::instantiate_rrc404(dec!(1000), "Ice".to_string(), "Water".to_string(),
-                                            "ICE".to_string(), "ICE RRC404 Experiment".to_string(), component_addr);
+                                            "ICE".to_string(), "ICE RRC404 Experiment".to_string(), component_addr, water_addr, ice_addr);
         }
 
         pub fn instantiate_rrc404(
@@ -59,7 +62,9 @@ mod rrc404 {
             fungible_name: String,
             symbol: String,
             description: String,
-            component_addr: Option<GlobalAddressReservation>
+            component_addr: Option<GlobalAddressReservation>,
+            water_addr: Option<GlobalAddressReservation>,
+            ice_addr: Option<GlobalAddressReservation>
         ) -> (Global<Rrc404>, Bucket) {
 
             let (address_reservation, component_address) = match component_addr {
@@ -69,6 +74,9 @@ mod rrc404 {
                     (r, addr)
                 },
             };
+
+            let water_address = water_addr.or_else(|| Some(Self::allocate_fungible_address().0)).unwrap();
+            let ice_address = ice_addr.or_else(|| Some(Runtime::allocate_non_fungible_address().0)).unwrap();
 
             let rrc404_fungible = ResourceBuilder::new_fungible(OwnerRole::Fixed(
                 rule!(require(global_caller(component_address)))))
@@ -89,6 +97,7 @@ mod rrc404 {
                     burner => rule!(require(global_caller(component_address)));
                     burner_updater => rule!(deny_all);
                 })
+                .with_address(water_address)
                 .mint_initial_supply(max_supply);
             
             let rrc404_nft = ResourceBuilder::new_integer_non_fungible::<Rrc404NFT>(OwnerRole::Fixed(
@@ -112,6 +121,7 @@ mod rrc404 {
                     non_fungible_data_updater => rule!(require(global_caller(component_address)));
                     non_fungible_data_updater_updater => rule!(deny_all);
                 })
+                .with_address(ice_address)
                 .create_with_no_initial_supply();
 
             let component = Self {
@@ -260,6 +270,18 @@ mod rrc404 {
             nft_bucket.burn();
 
             fungible_bucket
+        }
+
+        pub fn allocate_fungible_address() -> (GlobalAddressReservation, ResourceAddress) {
+            let bytes = copy_buffer(unsafe {
+                addr::address_allocate(
+                    RESOURCE_PACKAGE.as_ref().as_ptr(),
+                    RESOURCE_PACKAGE.as_ref().len(),
+                    FUNGIBLE_RESOURCE_MANAGER_BLUEPRINT.as_ptr(),
+                    FUNGIBLE_RESOURCE_MANAGER_BLUEPRINT.len(),
+                )
+            });
+            scrypto_decode(&bytes).unwrap()
         }
     }
 }
